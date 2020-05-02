@@ -1,0 +1,12 @@
+const ActionTypes = {
+    LOAD_GRID: 'LOAD_GRID',
+
+    UPDATE_SCORE: 'UPDATE_SCORE',
+    UPDATE_LINE: 'UPDATE_LINE',
+
+    TIMER_START: 'TIMER_START',
+    TIMER_INCREMENT: 'TIMER_INCREMENT',
+    TIMER_STOP: 'TIMER_STOP'
+}
+
+export default ActionTypes;

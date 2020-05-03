@@ -27,17 +27,27 @@ export const scoreReducer = (scoreState: ScoreState = initialState, action: Scor
     switch(action.type) {
         case ActionTypes.UPDATE_SCORE: {
             const updateScoreAction = action as UpdateScoreAction;
-            return {
-                ...scoreState,
-                score: scoreState.score + BPS_ScoringSystem(updateScoreAction.payload.lineCleared)
-            };
+            if(updateScoreAction.payload.lineCleared < 0) {
+                return initialState;
+            }
+            else {
+                return {
+                    ...scoreState,
+                    score: scoreState.score + BPS_ScoringSystem(updateScoreAction.payload.lineCleared)
+                };
+            }
         }
         case ActionTypes.UPDATE_LINE: {
             const updateLineAction = action as UpdateLineAction;
-            return {
-                ...scoreState,
-                line: scoreState.line + updateLineAction.payload.lineCleared
-            };
+            if(updateLineAction.payload.lineCleared < 0) {
+                return initialState;
+            }
+            else {
+                return {
+                    ...scoreState,
+                    line: scoreState.line + updateLineAction.payload.lineCleared
+                };
+            }
         }
         default: {
             return scoreState;

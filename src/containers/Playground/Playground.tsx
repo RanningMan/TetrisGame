@@ -17,6 +17,17 @@ const isValidPosition = (row: number, col: number) => {
     return true;
 }
 
+const emptyGrid = (grid: Grid) => {
+    for(let i = 0; i < Constants.PLAYGROUND_HEIGHT; i++) {
+        for(let j = 0; j < Constants.PLAYGROUND_WIDTH; j++) {
+            grid[i][j] = {
+                state: BlockState.EMPTY,
+                type: undefined
+            }
+        }
+    }
+}
+
 const clearPieceBlock = (grid: Grid) => {
     for(let i = 0; i < Constants.PLAYGROUND_HEIGHT; i++) {
         for(let j = 0; j < Constants.PLAYGROUND_WIDTH; j++) {
@@ -146,13 +157,15 @@ const rotate = (grid: Grid, piece: Piece, row: number, col: number): Piece => {
 }
 
 const moveDownStable = (grid: Grid, piece: Piece, row: number, col: number) => {
-    for(let i = Constants.PLAYGROUND_HEIGHT - 1; i > row; i--) {
-        if(canMoveTo(grid, piece, i, col)) {
-            refillPieceBlock(grid, i, col, piece);
-            return {row: i, col: col};
+    let firstRow = row;
+    for(let i = row + 1; i < Constants.PLAYGROUND_HEIGHT; i++) {
+        if(!canMoveTo(grid, piece, i, col)) {
+            firstRow = i;
+            break;
         }
     }
-    return {row: row, col: col};
+    refillPieceBlock(grid, firstRow - 1, col, piece);
+    return {row: firstRow - 1, col: col};
 }
 
 const Playground = ()=> {
@@ -271,8 +284,16 @@ const Playground = ()=> {
             
             const newPiece = currentPieceQueue[0];
             if(!canMoveTo(grid, newPiece, 0, 3)) {
-                dispatch(stopTimer());
-                alert('Game Over!');
+                if(window.confirm('Game Over!')) {
+                    emptyGrid(grid);
+                    dispatch(loadPlayground(grid));
+                    dispatch(stopTimer());
+                    dispatch(updateLine(-Constants.PLAYGROUND_WIDTH));
+                    dispatch(updateScore(-Constants.PLAYGROUND_WIDTH));
+                }
+                else {
+                    dispatch(stopTimer());
+                }
             }
             setCurrentPiece(newPiece);
             setPos({row: 0, col: 3});

@@ -32,7 +32,7 @@ const PlaygroundCanvas = (props: PlaygroundCanvasProps) => {
 
             if(ctx) {
                 ctx.clearRect(topLeft[0], topLeft[1], Constants.PLAYGROUNDCANVAS_WIDTH, Constants.PLAYGROUNDCANVAS_HEIGHT);
-                for(let i = 0; i < Constants.PLAYGROUND_HEIGHT; i++) {
+                for(let i = 2; i < Constants.PLAYGROUND_HEIGHT; i++) {
                     for(let j = 0; j < Constants.PLAYGROUND_WIDTH; j++) {
                         drawPiece(grid, ctx, topLeft, i, j);
                     }

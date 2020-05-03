@@ -1,0 +1,11 @@
+.ScoreBoard {
+    display: flex;
+    justify-content: flex-end;
+    flex-direction: column;
+}
+
+.Element {
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+}

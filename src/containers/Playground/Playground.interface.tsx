@@ -8,9 +8,14 @@ export type Grid = Array<Array<Block>>;
 
 export interface PlaygroundStoreState {
     grid: Grid;
+    pieceQueue: Piece[];
 }
 
-export type CurrentPiece = Array<Array<Block>>;
+export interface Piece {
+    piece: Array<Array<Block>>;
+    type: PIECE_TYPE;
+    direction: number;
+}
 
 export interface CurrentPiecePosition {
     row: number;

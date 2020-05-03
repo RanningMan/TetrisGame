@@ -1,31 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+
 import { RootState } from '../../redux/reducers/rootReducer';
 import PlaygroundCanvas from '../../components/PlaygroundCanvas/PlaygroundCanvas';
-import { Grid, CurrentPiecePosition, CurrentPiece } from './Playground.interface';
-import ActionTypes from '../../redux/actionTypes';
-import { Constants, PIECE_TYPE, PIECE_STATE, BlockState } from '../../constants';
+import { Grid, CurrentPiecePosition, Piece } from './Playground.interface';
+import { Constants, PIECE_STATE, BlockState } from '../../constants';
+import { pieceGenerate } from '../../util';
+import { generatePiece, loadPlayground } from '../../redux/actions/playgroundActions/playgroundActions';
+import { incrementTimer, stopTimer } from '../../redux/actions/timerActions/timerActions';
+import { updateLine, updateScore } from '../../redux/actions/scoreActions/scoreActions';
 
 const isValidPosition = (row: number, col: number) => {
     if(row < 0 || row  >= Constants.PLAYGROUND_HEIGHT || col < 0 || col >= Constants.PLAYGROUND_WIDTH) {
         return false;
     }
     return true;
-}
-
-const pieceGenerate = (type: PIECE_TYPE, direction: number): CurrentPiece => {
-    const model = PIECE_STATE[type][direction];
-    return model.map(row => {
-        return row.map(c => {
-            return c === 1 ? {
-                state: BlockState.OCCUPIED,
-                type: type
-            } : {
-                state: BlockState.EMPTY,
-                type: undefined
-            };
-        })
-    })
 }
 
 const clearPieceBlock = (grid: Grid) => {
@@ -78,21 +67,21 @@ const tryClearLine = (grid: Grid): number => {
     return lineCleared;
 }
 
-const refillPieceBlock = (grid: Grid, row: number, col: number, piece: CurrentPiece) => {
+const refillPieceBlock = (grid: Grid, row: number, col: number, piece: Piece) => {
     clearPieceBlock(grid);
     for (let i = 0; i < 4; i++) {
         for (let j = 0; j < 4; j++) {
             if (isValidPosition(row + i, col + j) && grid[i + row][j + col].state !== BlockState.STABLED) {
-                grid[i + row][j + col] = { ...piece[i][j] };
+                grid[i + row][j + col] = { ...piece.piece[i][j] };
             }
         }
     }
 }
 
-const canMoveTo = (grid: Grid, piece: CurrentPiece, row: number, col: number): boolean => {
+const canMoveTo = (grid: Grid, piece: Piece, row: number, col: number): boolean => {
     for(let i = 0; i < 4; i++) {
         for(let j = 0; j < 4; j++) {
-            if(piece[i][j].state === BlockState.OCCUPIED) {
+            if(piece.piece[i][j].state === BlockState.OCCUPIED) {
                 if(!isValidPosition(row + i, col + j)) {
                     return false;
                 }
@@ -116,7 +105,7 @@ const stablize = (grid: Grid) => {
     }
 }
 
-const moveDown = (grid: Grid, piece: CurrentPiece, row: number, col: number): CurrentPiecePosition | null => {
+const moveDown = (grid: Grid, piece: Piece, row: number, col: number): CurrentPiecePosition | null => {
     if(!canMoveTo(grid, piece, row + 1, col)) {
         return null;
     }
@@ -126,7 +115,7 @@ const moveDown = (grid: Grid, piece: CurrentPiece, row: number, col: number): Cu
     return {row: row + 1, col: col};
 }
 
-const moveLeft = (grid: Grid, piece: CurrentPiece, row: number, col: number): CurrentPiecePosition => {
+const moveLeft = (grid: Grid, piece: Piece, row: number, col: number): CurrentPiecePosition => {
     if(!canMoveTo(grid, piece, row, col - 1)) {
         return {row: row, col: col};
     }
@@ -135,7 +124,7 @@ const moveLeft = (grid: Grid, piece: CurrentPiece, row: number, col: number): Cu
     return {row: row, col: col - 1};
 }
 
-const moveRight = (grid: Grid, piece: CurrentPiece, row: number, col: number): CurrentPiecePosition => {
+const moveRight = (grid: Grid, piece: Piece, row: number, col: number): CurrentPiecePosition => {
     if(!canMoveTo(grid, piece, row, col + 1)) {
         return {row: row, col: col};
     }
@@ -144,8 +133,9 @@ const moveRight = (grid: Grid, piece: CurrentPiece, row: number, col: number): C
     return {row: row, col: col + 1};
 }
 
-const rotate = (grid: Grid, piece: CurrentPiece, type: PIECE_TYPE, direction: number, row: number, col: number): CurrentPiece => {
-    const currentPiece = pieceGenerate(type, direction);
+const rotate = (grid: Grid, piece: Piece, row: number, col: number): Piece => {
+    const direction = (piece.direction + 1) % PIECE_STATE[piece.type].length;
+    const currentPiece = pieceGenerate(piece.type, direction);
     if(!canMoveTo(grid, currentPiece, row, col)) {
         return piece;
     }
@@ -155,7 +145,7 @@ const rotate = (grid: Grid, piece: CurrentPiece, type: PIECE_TYPE, direction: nu
     }
 }
 
-const moveDownStable = (grid: Grid, piece: CurrentPiece, row: number, col: number) => {
+const moveDownStable = (grid: Grid, piece: Piece, row: number, col: number) => {
     for(let i = Constants.PLAYGROUND_HEIGHT - 1; i > row; i--) {
         if(canMoveTo(grid, piece, i, col)) {
             refillPieceBlock(grid, i, col, piece);
@@ -165,46 +155,22 @@ const moveDownStable = (grid: Grid, piece: CurrentPiece, row: number, col: numbe
     return {row: row, col: col};
 }
 
-const getRandomInt = (max: number) => {
-    return Math.floor(Math.random() * Math.floor(max));
-}
-
-const getRandomType = () => {
-    const num = getRandomInt(7);
-    switch(num) {
-        case 0: return PIECE_TYPE.L;
-        case 1: return PIECE_TYPE.J;
-        case 2: return PIECE_TYPE.S;
-        case 3: return PIECE_TYPE.Z;
-        case 4: return PIECE_TYPE.STICK;
-        case 5: return PIECE_TYPE.SQUARE;
-        case 6: return PIECE_TYPE.PYRAMID;
-        default: return PIECE_TYPE.L;
-    }
-}
-
-const getRandomDirection = (type: PIECE_TYPE): number => {
-    return getRandomInt(PIECE_STATE[type].length);
-}
-
 const Playground = ()=> {
-    let grid: Grid = useSelector((state: RootState) => state.playground.grid);
-    
+    let grid: Grid = useSelector((store: RootState) => store.playground.grid);    
     const timer = useSelector((store: RootState) => store.timer);
-    const dispatch = useDispatch();
-
+    const currentPieceQueue = useSelector((store: RootState) => store.playground.pieceQueue);
+    
     const [pos, setPos] = useState<CurrentPiecePosition>({row: 0, col: 3});
-    const [currentDirection, setCurrentDirection] = useState<number>(0);
-    const [currentPiece, setCurrentPiece] = useState<CurrentPiece>();
-    const [currentPieceType, setCurrentPieceType] = useState<PIECE_TYPE>(PIECE_TYPE.L);
+    const [currentPiece, setCurrentPiece] = useState<Piece>(currentPieceQueue[0]);
     const [staleTime, setStaleTime] = useState<number>(timer.currentTime);
     const [redrawTime, setRedrawTime] = useState<number>(0);
     const [isDirectDown, setIsDirectDown] = useState<boolean>(false);
+    
+    const dispatch = useDispatch();
+
   
     useEffect(() => {
-        const timerInterval = setInterval(() => dispatch({
-            type: ActionTypes.TIMER_INCREMENT
-        }), 1000);
+        const timerInterval = setInterval(() => dispatch(incrementTimer()), 1000);
 
         return () => {
             console.log('clear side effects.');
@@ -215,7 +181,7 @@ const Playground = ()=> {
     useEffect(() => {
         const currentTime = timer.currentTime;
         const keyDownHandler = (e: KeyboardEvent) => {
-            if(currentPiece && pos && !isDirectDown) {
+            if(currentPiece && pos && !isDirectDown && pos.row >= 1) {
                 switch(e.keyCode) {
                     case 32: {
                         const newPos = moveDownStable(grid, currentPiece, pos.row, pos.col);
@@ -229,9 +195,7 @@ const Playground = ()=> {
                         break;
                     }
                     case 38: {
-                        const newDirection = (currentDirection + 1) % PIECE_STATE[currentPieceType].length;
-                        setCurrentDirection(newDirection);
-                        const newPiece = rotate(grid, currentPiece, currentPieceType, newDirection, pos.row, pos.col);
+                        const newPiece = rotate(grid, currentPiece, pos.row, pos.col);
                         setCurrentPiece(newPiece);
                         break;
                     }
@@ -253,10 +217,7 @@ const Playground = ()=> {
                     }
                 }
                 setRedrawTime(currentTime);
-                dispatch({
-                    type: ActionTypes.LOAD_GRID,
-                    payload: JSON.parse(JSON.stringify(grid))
-                });
+                dispatch(loadPlayground(grid));
             }
             else {
                 console.log(`Invalid keyboard event: ${e}`);
@@ -268,7 +229,7 @@ const Playground = ()=> {
         return () => {
             window.removeEventListener('keydown', keyDownHandler);
         }
-    })
+    });
 
     useEffect(() => {
         const currentTime = timer.currentTime;
@@ -303,30 +264,16 @@ const Playground = ()=> {
             stablize(grid);
             const lineCleared = tryClearLine(grid);
             if(lineCleared > 0) {
-                dispatch({
-                    type: ActionTypes.UPDATE_LINE,
-                    payload: {
-                        lineCleared: lineCleared
-                    }
-                });
-                dispatch({
-                    type: ActionTypes.UPDATE_SCORE,
-                    payload: {
-                        lineCleared: lineCleared
-                    }
-                });
+                dispatch(updateLine(lineCleared));
+                dispatch(updateScore(lineCleared));
             }
-            const newPieceType = getRandomType();
-            const newDirection = getRandomDirection(newPieceType);
-            const newPiece = pieceGenerate(newPieceType, newDirection);
+            dispatch(generatePiece());
+            
+            const newPiece = currentPieceQueue[0];
             if(!canMoveTo(grid, newPiece, 0, 3)) {
-                dispatch({
-                    type: ActionTypes.TIMER_STOP
-                });
+                dispatch(stopTimer());
                 alert('Game Over!');
             }
-            setCurrentPieceType(newPieceType);
-            setCurrentDirection(newDirection);
             setCurrentPiece(newPiece);
             setPos({row: 0, col: 3});
             setStaleTime(currentTime);
@@ -344,17 +291,12 @@ const Playground = ()=> {
             }
         }
 
-        dispatch({
-            type: ActionTypes.LOAD_GRID,
-            payload: JSON.parse(JSON.stringify(grid))
-        });
+        dispatch(loadPlayground(grid));
         
     }, [timer, dispatch]);
 
     return (
-        <>
-            <PlaygroundCanvas grid={grid} redraw={redrawTime}/>
-        </>
+        <PlaygroundCanvas grid={grid} redraw={redrawTime} />
     )
 }
 

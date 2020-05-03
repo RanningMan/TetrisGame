@@ -12,7 +12,7 @@ export const updateScore = (lineCleared: number): UpdateScoreAction => {
 
 export const updateLine = (lineCleared: number): UpdateLineAction => {
     return {
-        type: ActionTypes.UPDATE_SCORE,
+        type: ActionTypes.UPDATE_LINE,
         payload: {
             lineCleared: lineCleared
         }

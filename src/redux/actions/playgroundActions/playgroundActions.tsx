@@ -8,3 +8,9 @@ export const loadPlayground = (grid: Grid) => {
         payload: grid
     };
 }
+
+export const generatePiece = () => {
+    return {
+        type: ActionTypes.GENERATE_PIECE
+    }
+}

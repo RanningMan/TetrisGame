@@ -1,0 +1,10 @@
+.App {
+	display: flex;
+	justify-content: center;
+}
+
+.Panel {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
